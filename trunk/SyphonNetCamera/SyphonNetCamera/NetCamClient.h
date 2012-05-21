@@ -8,7 +8,6 @@
 
 #import <Foundation/Foundation.h>
 #import "Base64.h"
-#import "turbojpeg.h"
 
 
 typedef enum {

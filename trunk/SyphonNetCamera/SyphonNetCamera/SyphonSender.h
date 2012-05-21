@@ -12,6 +12,7 @@
 #import <OpenGL/gl.h>
 #import <OpenGL/glext.h>
 #import <Syphon/Syphon.h>
+#import "turbojpeg.h"
 #import "NetCamClient.h"
 
 @interface SyphonSender : NSObject<NetCamClientDelegate>{
