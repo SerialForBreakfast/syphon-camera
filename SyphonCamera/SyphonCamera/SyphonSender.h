@@ -9,13 +9,13 @@
 #import <Foundation/Foundation.h>
 #import <OpenGL/OpenGL.h>
 #import <OpenGL/gl.h>
-#import <OpenGL/glext.h>
 #import <Syphon/Syphon.h>
 #import "QTKitHelper.h"
 
 
 @interface SyphonSender : NSObject{
     NSOpenGLContext *glContext;
+    CGLContextObj cgl_ctx;
     SyphonServer *server;
     
     NSString                            *_currentDevice;
@@ -23,7 +23,6 @@
 	QTCaptureDeviceInput				*mCaptureDeviceInput;
 	QTCaptureDecompressedVideoOutput	*mCaptureDecompressedVideoOutput;
 	
-    GLuint framebuffer, renderbuffer;
     GLuint texture;
     NSInteger curWidth;
     NSInteger curHeight;
