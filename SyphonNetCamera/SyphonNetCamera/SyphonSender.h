@@ -10,17 +10,16 @@
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/OpenGL.h>
 #import <OpenGL/gl.h>
-#import <OpenGL/glext.h>
 #import <Syphon/Syphon.h>
 #import "turbojpeg.h"
 #import "NetCamClient.h"
 
 @interface SyphonSender : NSObject<NetCamClientDelegate>{
     NSOpenGLContext *glContext;
+    CGLContextObj cgl_ctx;
     SyphonServer *server;
     NetCamClient *client;
     
-    GLuint framebuffer, renderbuffer;
     GLuint texture;
     void *imageData;
     NSInteger curWidth;
