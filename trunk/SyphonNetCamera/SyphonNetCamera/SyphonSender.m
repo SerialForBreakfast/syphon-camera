@@ -7,6 +7,7 @@
 //
 
 #import "SyphonSender.h"
+#import <OpenGL/CGLMacro.h>
 
 @implementation SyphonSender
 
@@ -105,7 +106,8 @@
     };
     NSOpenGLPixelFormat *format = [[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
     glContext = [[NSOpenGLContext alloc] initWithFormat:format shareContext:nil];
-    [glContext makeCurrentContext];
+    cgl_ctx = [glContext CGLContextObj];
+    
     // Enable GL multithreading
 //    CGLError err = 0;
 //    CGLContextObj ctx = CGLGetCurrentContext();
@@ -114,14 +116,13 @@
 //        NSLog(@"Could not enable MP OpenGL");
 //    }
     
-    server = [[SyphonServer alloc] initWithName:self.name context:glContext.CGLContextObj options:nil];
+    server = [[SyphonServer alloc] initWithName:self.name context:cgl_ctx options:nil];
     [server addObserver:self forKeyPath:@"hasClients" options:NSKeyValueObservingOptionNew context:nil];
 }
 
 - (void) cleanupOffScreenRenderer{
     if(texture != 0){
         glDeleteTextures(1, &texture);
-        glDeleteFramebuffersEXT(1, &framebuffer);
         free(imageData);
         texture = 0;
     }
@@ -129,27 +130,16 @@
 
 - (void) setupOffScreenRenderWithWidth:(NSInteger) width height:(NSInteger) height{
     [self cleanupOffScreenRenderer];
-    [glContext makeCurrentContext];
+
     glEnable(GL_TEXTURE_2D);
     
-    GLenum status;
-    glGenFramebuffersEXT(1, &framebuffer);
-    
-    // Set up the FBO with one texture attachment
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, framebuffer);
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLint)width, (GLint)height, 0,
-                 GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT,
-                              GL_TEXTURE_2D, texture, 0);
-    status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-    if (status != GL_FRAMEBUFFER_COMPLETE_EXT){
-        NSLog(@"Error creating offscreen FBO");
-        // Handle error here
-    }
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
     
     imageData = calloc(width * 4, height);
 }
@@ -190,20 +180,18 @@
                         &imageWidth, &imageHeight, &jpegsubsamp);
     if(texture == 0 || curHeight != imageHeight || curWidth != imageWidth){
         [self setupOffScreenRenderWithWidth:imageWidth height:imageHeight];
+        curWidth = imageWidth;
+        curHeight = imageHeight;
     }
-    curWidth = imageWidth;
-    curHeight = imageHeight;
     tjDecompress2(jpeg, (unsigned char*)[imagedata bytes], [imagedata length], imageData, imageWidth, 0, imageHeight, TJPF_RGBX, 0);
     
-    [glContext makeCurrentContext];
     //TODO: guess this only works cause I leave states open, probably best to set these here again?
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)imageWidth, (GLsizei)imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imageWidth, imageHeight, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, imageData);
     [server publishFrameTexture:texture
                     textureTarget:GL_TEXTURE_2D
                       imageRegion:NSMakeRect(0, 0, imageWidth, imageHeight)
               textureDimensions:(NSSize){imageWidth, imageHeight}
                           flipped:YES];
-    [glContext update];
 }
 
 - (void) netCamClient:(NetCamClient*) client didReceiveError:(NSError*) error{
