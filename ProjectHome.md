@@ -1,0 +1,1 @@
+Camera input applications for the Syphon framework allowing to put video streams captured from various sources into syphon.
